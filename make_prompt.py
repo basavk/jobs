@@ -46,19 +46,21 @@ def main():
         score = scores.get(slug, {})
         pay = int(row["median_pay_annual"]) if row.get("median_pay_annual") else None
         jobs = int(row["num_jobs_2024"]) if row.get("num_jobs_2024") else None
-        records.append({
-            "title": occ["title"],
-            "slug": slug,
-            "category": row.get("category", occ.get("category", "")),
-            "pay": pay,
-            "jobs": jobs,
-            "outlook_pct": int(row["outlook_pct"]) if row.get("outlook_pct") else None,
-            "outlook_desc": row.get("outlook_desc", ""),
-            "education": row.get("entry_education", ""),
-            "exposure": score.get("exposure"),
-            "rationale": score.get("rationale", ""),
-            "url": occ.get("url", ""),
-        })
+        records.append(
+            {
+                "title": occ["title"],
+                "slug": slug,
+                "category": row.get("category", occ.get("category", "")),
+                "pay": pay,
+                "jobs": jobs,
+                "outlook_pct": int(row["outlook_pct"]) if row.get("outlook_pct") else None,
+                "outlook_desc": row.get("outlook_desc", ""),
+                "education": row.get("entry_education", ""),
+                "exposure": score.get("exposure"),
+                "rationale": score.get("rationale", ""),
+                "url": occ.get("url", ""),
+            }
+        )
 
     # Sort by exposure desc, then jobs desc
     records.sort(key=lambda r: (-(r["exposure"] or 0), -(r["jobs"] or 0)))
@@ -68,7 +70,9 @@ def main():
     # ── Header ──
     lines.append("# AI Exposure of the US Job Market")
     lines.append("")
-    lines.append("This document contains structured data on 342 US occupations from the Bureau of Labor Statistics Occupational Outlook Handbook, each scored for AI exposure on a 0-10 scale by an LLM (Gemini Flash). Use this data to analyze, question, and discuss how AI will reshape the US labor market.")
+    lines.append(
+        "This document contains structured data on 342 US occupations from the Bureau of Labor Statistics Occupational Outlook Handbook, each scored for AI exposure on a 0-10 scale by an LLM (Gemini Flash). Use this data to analyze, question, and discuss how AI will reshape the US labor market."
+    )
     lines.append("")
     lines.append("Live visualization: https://karpathy.ai/jobs/")
     lines.append("GitHub: https://github.com/karpathy/jobs")
@@ -77,9 +81,13 @@ def main():
     # ── Scoring methodology ──
     lines.append("## Scoring methodology")
     lines.append("")
-    lines.append("Each occupation was scored on a single AI Exposure axis from 0 to 10, measuring how much AI will reshape that occupation. The score considers both direct automation (AI doing the work) and indirect effects (AI making workers so productive that fewer are needed).")
+    lines.append(
+        "Each occupation was scored on a single AI Exposure axis from 0 to 10, measuring how much AI will reshape that occupation. The score considers both direct automation (AI doing the work) and indirect effects (AI making workers so productive that fewer are needed)."
+    )
     lines.append("")
-    lines.append("A key heuristic: if the job can be done entirely from a home office on a computer — writing, coding, analyzing, communicating — then AI exposure is inherently high (7+), because AI capabilities in digital domains are advancing rapidly. Conversely, jobs requiring physical presence, manual skill, or real-time human interaction have a natural barrier.")
+    lines.append(
+        "A key heuristic: if the job can be done entirely from a home office on a computer — writing, coding, analyzing, communicating — then AI exposure is inherently high (7+), because AI capabilities in digital domains are advancing rapidly. Conversely, jobs requiring physical presence, manual skill, or real-time human interaction have a natural barrier."
+    )
     lines.append("")
     lines.append("Calibration anchors:")
     lines.append("- 0-1 Minimal: roofers, janitors, construction laborers")
@@ -98,13 +106,17 @@ def main():
     total_wages = sum((r["jobs"] or 0) * (r["pay"] or 0) for r in records)
 
     # Weighted avg exposure
-    w_sum = sum((r["exposure"] or 0) * (r["jobs"] or 0) for r in records if r["exposure"] is not None and r["jobs"])
+    w_sum = sum(
+        (r["exposure"] or 0) * (r["jobs"] or 0)
+        for r in records
+        if r["exposure"] is not None and r["jobs"]
+    )
     w_count = sum(r["jobs"] or 0 for r in records if r["exposure"] is not None and r["jobs"])
     w_avg = w_sum / w_count if w_count else 0
 
     lines.append(f"- Total occupations: {len(records)}")
-    lines.append(f"- Total jobs: {total_jobs:,} ({total_jobs/1e6:.0f}M)")
-    lines.append(f"- Total annual wages: ${total_wages/1e12:.1f}T")
+    lines.append(f"- Total jobs: {total_jobs:,} ({total_jobs / 1e6:.0f}M)")
+    lines.append(f"- Total annual wages: ${total_wages / 1e12:.1f}T")
     lines.append(f"- Job-weighted average AI exposure: {w_avg:.1f}/10")
     lines.append("")
 
@@ -125,7 +137,9 @@ def main():
         jobs = sum(r["jobs"] or 0 for r in group)
         wages = sum((r["jobs"] or 0) * (r["pay"] or 0) for r in group)
         avg_pay = wages / jobs if jobs else 0
-        lines.append(f"| {name} | {len(group)} | {fmt_jobs(jobs)} | {jobs/total_jobs*100:.1f}% | ${wages/1e12:.1f}T | {wages/total_wages*100:.1f}% | {fmt_pay(int(avg_pay))} |")
+        lines.append(
+            f"| {name} | {len(group)} | {fmt_jobs(jobs)} | {jobs / total_jobs * 100:.1f}% | ${wages / 1e12:.1f}T | {wages / total_wages * 100:.1f}% | {fmt_pay(int(avg_pay))} |"
+        )
     lines.append("")
 
     # By pay band
@@ -141,19 +155,29 @@ def main():
     lines.append("| Pay band | Avg exposure | Jobs |")
     lines.append("|----------|-------------|------|")
     for name, lo, hi in pay_bands:
-        group = [r for r in records if r["pay"] and lo <= r["pay"] < hi and r["exposure"] is not None and r["jobs"]]
+        group = [
+            r
+            for r in records
+            if r["pay"] and lo <= r["pay"] < hi and r["exposure"] is not None and r["jobs"]
+        ]
         if group:
             ws = sum(r["exposure"] * r["jobs"] for r in group)
             wc = sum(r["jobs"] for r in group)
-            lines.append(f"| {name} | {ws/wc:.1f} | {fmt_jobs(wc)} |")
+            lines.append(f"| {name} | {ws / wc:.1f} | {fmt_jobs(wc)} |")
     lines.append("")
 
     # By education
     lines.append("### Average exposure by education level (job-weighted)")
     lines.append("")
     edu_groups = [
-        ("No degree / HS diploma", ["No formal educational credential", "High school diploma or equivalent"]),
-        ("Postsecondary / Associate's", ["Postsecondary nondegree award", "Some college, no degree", "Associate's degree"]),
+        (
+            "No degree / HS diploma",
+            ["No formal educational credential", "High school diploma or equivalent"],
+        ),
+        (
+            "Postsecondary / Associate's",
+            ["Postsecondary nondegree award", "Some college, no degree", "Associate's degree"],
+        ),
         ("Bachelor's", ["Bachelor's degree"]),
         ("Master's", ["Master's degree"]),
         ("Doctoral / Professional", ["Doctoral or professional degree"]),
@@ -161,11 +185,15 @@ def main():
     lines.append("| Education | Avg exposure | Jobs |")
     lines.append("|-----------|-------------|------|")
     for name, matches in edu_groups:
-        group = [r for r in records if r["education"] in matches and r["exposure"] is not None and r["jobs"]]
+        group = [
+            r
+            for r in records
+            if r["education"] in matches and r["exposure"] is not None and r["jobs"]
+        ]
         if group:
             ws = sum(r["exposure"] * r["jobs"] for r in group)
             wc = sum(r["jobs"] for r in group)
-            lines.append(f"| {name} | {ws/wc:.1f} | {fmt_jobs(wc)} |")
+            lines.append(f"| {name} | {ws / wc:.1f} | {fmt_jobs(wc)} |")
     lines.append("")
 
     # BLS outlook vs exposure
@@ -176,7 +204,9 @@ def main():
     lines.append("| Occupation | Exposure | Outlook | Jobs |")
     lines.append("|-----------|----------|---------|------|")
     for r in declining:
-        lines.append(f"| {r['title']} | {r['exposure']}/10 | {r['outlook_pct']:+d}% | {fmt_jobs(r['jobs'])} |")
+        lines.append(
+            f"| {r['title']} | {r['exposure']}/10 | {r['outlook_pct']:+d}% | {fmt_jobs(r['jobs'])} |"
+        )
     lines.append("")
 
     lines.append("### Fastest-growing occupations (10%+ projected growth)")
@@ -186,7 +216,9 @@ def main():
     lines.append("| Occupation | Exposure | Outlook | Jobs |")
     lines.append("|-----------|----------|---------|------|")
     for r in growing:
-        lines.append(f"| {r['title']} | {r['exposure']}/10 | +{r['outlook_pct']}% | {fmt_jobs(r['jobs'])} |")
+        lines.append(
+            f"| {r['title']} | {r['exposure']}/10 | +{r['outlook_pct']}% | {fmt_jobs(r['jobs'])} |"
+        )
     lines.append("")
 
     # ── Full occupation table ──
@@ -200,7 +232,9 @@ def main():
         if not group:
             continue
         group_jobs = sum(r["jobs"] or 0 for r in group)
-        lines.append(f"### Exposure {score}/10 ({len(group)} occupations, {fmt_jobs(group_jobs)} jobs)")
+        lines.append(
+            f"### Exposure {score}/10 ({len(group)} occupations, {fmt_jobs(group_jobs)} jobs)"
+        )
         lines.append("")
         lines.append("| # | Occupation | Pay | Jobs | Outlook | Education | Rationale |")
         lines.append("|---|-----------|-----|------|---------|-----------|-----------|")
@@ -220,7 +254,9 @@ def main():
                 "See How to Become One": "Varies",
             }.get(edu, edu)
             rationale = r["rationale"].replace("|", "/").replace("\n", " ")
-            lines.append(f"| {i} | {r['title']} | {fmt_pay(r['pay'])} | {fmt_jobs(r['jobs'])} | {outlook} | {edu_short} | {rationale} |")
+            lines.append(
+                f"| {i} | {r['title']} | {fmt_pay(r['pay'])} | {fmt_jobs(r['jobs'])} | {outlook} | {edu_short} | {rationale} |"
+            )
         lines.append("")
 
     # Write

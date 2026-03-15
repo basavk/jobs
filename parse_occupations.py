@@ -1,7 +1,8 @@
 """Parse BLS Occupational Outlook Handbook A-Z index to extract all occupations."""
 
-from bs4 import BeautifulSoup
 import json
+
+from bs4 import BeautifulSoup
 
 with open("occupational_outlook_handbook.html", "r") as f:
     soup = BeautifulSoup(f.read(), "html.parser")

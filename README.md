@@ -62,10 +62,26 @@ The main visualization is an interactive **treemap** where:
 
 [`prompt.md`](prompt.md) packages all the data — aggregate statistics, tier breakdowns, exposure by pay/education, BLS growth projections, and all 342 occupations with their scores and rationales — into a single file (~45K tokens) designed to be pasted into an LLM. This lets you have a data-grounded conversation about AI's impact on the job market without needing to run any code. Regenerate it with `uv run python make_prompt.py`.
 
+## Project structure
+
+```
+src/jobs/          # Importable Python package
+  __init__.py
+  parse.py         # BLS HTML → Markdown helpers
+  scoring.py       # OpenRouter scoring with retry/error handling
+
+tests/
+  test_parse.py    # Deterministic parsing tests (uses html/ fixtures)
+
+parse_detail.py    # Thin shim — re-exports from src/jobs/parse
+process.py         # HTML → Markdown batch script
+score.py           # LLM scoring batch script
+```
+
 ## Setup
 
 ```
-uv sync
+uv sync --all-extras
 uv run playwright install chromium
 ```
 
@@ -94,4 +110,20 @@ uv run python build_site_data.py
 
 # Serve the site locally
 cd site && python -m http.server 8000
+```
+
+## Development
+
+```bash
+# Install dev deps (pytest + ruff)
+uv sync --all-extras
+
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format check
+uv run ruff format --check .
 ```

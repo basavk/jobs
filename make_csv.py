@@ -11,11 +11,12 @@ import csv
 import json
 import os
 import re
+
 from bs4 import BeautifulSoup
 
 
 def clean(text):
-    return re.sub(r'\s+', ' ', text).strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def parse_pay(value):
@@ -23,7 +24,7 @@ def parse_pay(value):
     annual = ""
     hourly = ""
     # Find all dollar amounts
-    amounts = re.findall(r'\$([\d,]+(?:\.\d+)?)', value)
+    amounts = re.findall(r"\$([\d,]+(?:\.\d+)?)", value)
     if "per year" in value and "per hour" in value and len(amounts) >= 2:
         annual = amounts[0].replace(",", "")
         hourly = amounts[1].replace(",", "")
@@ -36,10 +37,10 @@ def parse_pay(value):
 
 def parse_outlook(value):
     """Parse '9% (Much faster than average)' into (pct, description)."""
-    m = re.match(r'(-?\d+)%\s*\((.+)\)', value)
+    m = re.match(r"(-?\d+)%\s*\((.+)\)", value)
     if m:
         return m.group(1), m.group(2)
-    m = re.match(r'(-?\d+)%', value)
+    m = re.match(r"(-?\d+)%", value)
     if m:
         return m.group(1), ""
     return "", value
@@ -49,7 +50,7 @@ def parse_number(value):
     """Strip commas and return a clean number string."""
     cleaned = value.replace(",", "").strip()
     # Handle negative numbers
-    if re.match(r'^-?\d+$', cleaned):
+    if re.match(r"^-?\d+$", cleaned):
         return cleaned
     return value.strip()
 
@@ -134,11 +135,20 @@ def main():
         occupations = json.load(f)
 
     fieldnames = [
-        "title", "category", "slug", "soc_code",
-        "median_pay_annual", "median_pay_hourly",
-        "entry_education", "work_experience", "training",
-        "num_jobs_2024", "projected_employment_2034",
-        "outlook_pct", "outlook_desc", "employment_change",
+        "title",
+        "category",
+        "slug",
+        "soc_code",
+        "median_pay_annual",
+        "median_pay_hourly",
+        "entry_education",
+        "work_experience",
+        "training",
+        "num_jobs_2024",
+        "projected_employment_2034",
+        "outlook_pct",
+        "outlook_desc",
+        "employment_change",
         "url",
     ]
 
@@ -160,9 +170,11 @@ def main():
     print(f"Wrote {len(rows)} rows to occupations.csv (missing HTML: {missing})")
 
     # Quick sanity check
-    print(f"\nSample rows:")
+    print("\nSample rows:")
     for r in rows[:3]:
-        print(f"  {r['title']}: ${r['median_pay_annual']}/yr, {r['num_jobs_2024']} jobs, {r['outlook_pct']}% outlook")
+        print(
+            f"  {r['title']}: ${r['median_pay_annual']}/yr, {r['num_jobs_2024']} jobs, {r['outlook_pct']}% outlook"
+        )
 
 
 if __name__ == "__main__":
