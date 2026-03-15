@@ -12,6 +12,7 @@ Usage:
 import argparse
 import json
 import os
+
 from parse_detail import parse_ooh_page
 
 

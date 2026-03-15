@@ -2,7 +2,7 @@
 Score each occupation's AI exposure using an LLM via OpenRouter.
 
 Reads Markdown descriptions from pages/, sends each to an LLM with a scoring
-rubric, and collects structured scores. Results are cached incrementally to
+rubric, and collects structured scores.  Results are cached incrementally to
 scores.json so the script can be resumed if interrupted.
 
 Usage:
@@ -15,14 +15,16 @@ import argparse
 import json
 import os
 import time
+
 import httpx
 from dotenv import load_dotenv
+
+from jobs.scoring import score_occupation
 
 load_dotenv()
 
 DEFAULT_MODEL = "google/gemini-3-flash-preview"
 OUTPUT_FILE = "scores.json"
-API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 SYSTEM_PROMPT = """\
 You are an expert analyst evaluating how exposed different occupations are to \
@@ -85,51 +87,22 @@ Respond with ONLY a JSON object in this exact format, no other text:
 """
 
 
-def score_occupation(client, text, model):
-    """Send one occupation to the LLM and parse the structured response."""
-    response = client.post(
-        API_URL,
-        headers={
-            "Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}",
-        },
-        json={
-            "model": model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": text},
-            ],
-            "temperature": 0.2,
-        },
-        timeout=60,
-    )
-    response.raise_for_status()
-    content = response.json()["choices"][0]["message"]["content"]
-
-    # Strip markdown code fences if present
-    content = content.strip()
-    if content.startswith("```"):
-        content = content.split("\n", 1)[1]  # remove first line
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-
-    return json.loads(content)
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=None)
     parser.add_argument("--delay", type=float, default=0.5)
-    parser.add_argument("--force", action="store_true",
-                        help="Re-score even if already cached")
+    parser.add_argument("--force", action="store_true", help="Re-score even if already cached")
+    parser.add_argument(
+        "--max-retries", type=int, default=3, help="Max retry attempts per occupation (default: 3)"
+    )
     args = parser.parse_args()
 
     with open("occupations.json") as f:
         occupations = json.load(f)
 
-    subset = occupations[args.start:args.end]
+    subset = occupations[args.start : args.end]
 
     # Load existing scores
     scores = {}
@@ -141,36 +114,52 @@ def main():
     print(f"Scoring {len(subset)} occupations with {args.model}")
     print(f"Already cached: {len(scores)}")
 
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
     errors = []
     client = httpx.Client()
 
     for i, occ in enumerate(subset):
         slug = occ["slug"]
 
-        if slug in scores:
+        if slug in scores and not args.force:
             continue
 
         md_path = f"pages/{slug}.md"
         if not os.path.exists(md_path):
-            print(f"  [{i+1}] SKIP {slug} (no markdown)")
+            print(f"  [{i + 1}] SKIP {slug} (no markdown)")
             continue
 
         with open(md_path) as f:
             text = f.read()
 
-        print(f"  [{i+1}/{len(subset)}] {occ['title']}...", end=" ", flush=True)
+        print(f"  [{i + 1}/{len(subset)}] {occ['title']}...", end=" ", flush=True)
 
-        try:
-            result = score_occupation(client, text, args.model)
+        result = score_occupation(
+            client,
+            text,
+            args.model,
+            api_key,
+            SYSTEM_PROMPT,
+            max_retries=args.max_retries,
+        )
+
+        if result.get("exposure") is None:
+            # Record failure and keep going
+            print(f"FAILED: {result.get('error', 'unknown')}")
+            errors.append(slug)
+            scores[slug] = {
+                "slug": slug,
+                "title": occ["title"],
+                "exposure": None,
+                "error": result.get("error", "unknown"),
+            }
+        else:
             scores[slug] = {
                 "slug": slug,
                 "title": occ["title"],
                 **result,
             }
             print(f"exposure={result['exposure']}")
-        except Exception as e:
-            print(f"ERROR: {e}")
-            errors.append(slug)
 
         # Save after each one (incremental checkpoint)
         with open(OUTPUT_FILE, "w") as f:
@@ -186,7 +175,7 @@ def main():
         print(f"Errors: {errors}")
 
     # Summary stats
-    vals = [s for s in scores.values() if "exposure" in s]
+    vals = [s for s in scores.values() if s.get("exposure") is not None]
     if vals:
         avg = sum(s["exposure"] for s in vals) / len(vals)
         by_score = {}

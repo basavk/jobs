@@ -17,7 +17,9 @@ import argparse
 import json
 import os
 import time
+
 from playwright.sync_api import sync_playwright
+
 
 # ---------------------------------------------------------------------------
 # Main scraper
@@ -35,7 +37,7 @@ def main():
         occupations = json.load(f)
 
     end = args.end if args.end is not None else len(occupations)
-    subset = occupations[args.start:end]
+    subset = occupations[args.start : end]
 
     # Create output dirs
     os.makedirs("html", exist_ok=True)
